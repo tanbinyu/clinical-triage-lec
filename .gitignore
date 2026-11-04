@@ -1,0 +1,39 @@
+# Python caches and local environments
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Raw data, frozen inference exports and model weights are not redistributed
+/data/
+/weights/
+
+# Inference caches, checkpoints and staged exports
+/inference_code/work/
+/inference_code/outputs/
+
+# Calibration outputs and local QA artifacts
+/calibration_code/result/
+/calibration_code/tmp/
+
+# Historical one-off wrappers are retained locally but are not part of the release
+/calibration_code/run/legacy/
+

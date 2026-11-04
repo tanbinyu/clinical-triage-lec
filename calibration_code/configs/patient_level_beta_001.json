@@ -1,0 +1,18 @@
+{
+  "input_dir": "../data/inference",
+  "output_dir": "result/patient_level/beta-0.01_alpha-0.20",
+  "beta": 0.01,
+  "alpha": 0.20,
+  "n_splits": 500,
+  "n_bootstrap": 1000,
+  "router_calib_ratio": 0.40,
+  "specialist_calib_ratio": 0.30,
+  "test_ratio": 0.30,
+  "seed": 20260919,
+  "aggregation": "mean",
+  "lambda_1": 0.00,
+  "lambda_2": 1.00,
+  "require_real_ids": true,
+  "run_sensitivity": true,
+  "run_full_suite": true
+}

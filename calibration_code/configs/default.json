@@ -1,0 +1,13 @@
+{
+  "phase1": "../data/inference/phase_1.json",
+  "phase2_dir": "../data/inference",
+  "output_dir": "result/json",
+  "num_splits": 500,
+  "split_ratio": 0.5,
+  "beta": 0.1,
+  "alpha_A": 0.1,
+  "alpha_B": 0.1,
+  "lambda_1": 0.5,
+  "lambda_2": 0.5,
+  "steps": [2, 3, 4, 5, 6]
+}

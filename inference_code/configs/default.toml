@@ -1,0 +1,49 @@
+[paths]
+output_dir = '..\..\data\inference'
+work_dir = '..\work'
+weights_root = '..\..\weights'
+adapters_dir = '..\..\weights\adapters'
+router_source = '..\..\weights\UniMed-CLIP\source'
+router_checkpoint = '..\..\weights\UniMed-CLIP\unimed_clip_vit_l14_base_text_encoder.pt'
+router_text_encoder = '..\..\weights\UniMed-CLIP\BiomedBERT-base'
+
+[runtime]
+device = "auto"
+batch_size = 16
+split_seed = 20261019
+analysis_seed = 20260929
+training_seed = 20261019
+train_fraction = 0.35
+val_fraction = 0.05
+downstream_fraction = 0.60
+cr_fraction = 0.40
+cs_fraction = 0.30
+evaluation_fraction = 0.30
+max_downstream_patients_per_source = 2000
+deterministic_algorithms = true
+multilabel_threshold = 0.50
+volume_slices = 8
+adapter_bottleneck = 256
+strict_data_validation = true
+preprocessing_version = "v1"
+
+[checkpoint_ids]
+UniMed-CLIP = "local:unimed_clip_vit_l14_base_text_encoder.pt; source=536d1651ab28a68a85af07b0ad1a3c56de34e14c"
+UNI = "MahmoodLab/UNI (access-controlled; local checkpoint required)"
+DINOv2-large = "facebook/dinov2-large"
+RAD-DINO = "microsoft/rad-dino"
+USFM = "USFM_latest.pth; source=960a1e1d30b9490e53e6e7cf1b4dd24425fffc67"
+CineMA = "mathpluscode/CineMA@c10daa1d93f0ea28d8b9ad9206b0f673d25805c1"
+
+[dataset_roots]
+LungHist700 = '..\..\data\raw\LungHist700'
+BreakHis = '..\..\data\raw\BreakHis'
+COVID_CT = '..\..\data\raw\COVID-CT'
+LDFC = '..\..\data\raw\LDFC'
+ImageCHD = '..\..\data\raw\ImageCHD'
+ChestX_ray14 = '..\..\data\raw\ChestX-ray14'
+CBIS-DDSM = '..\..\data\raw\CBIS-DDSM'
+BUS-BRA = '..\..\data\raw\BUS-BRA'
+PU2756 = '..\..\data\raw\PU2756'
+ACDC = '..\..\data\raw\ACDC'
+

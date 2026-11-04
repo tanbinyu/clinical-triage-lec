@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.tmp/
+work/feature_cache/
+work/manifests/
+work/splits/
+work/downstream_partitions/
+work/checkpoints/
+work/runs/
+work/metrics/
+work/prepared/
+.pdf_review/
+.test-tmp/
+

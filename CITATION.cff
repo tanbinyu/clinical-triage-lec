@@ -1,0 +1,43 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying manuscript and the original LEC paper."
+title: "Risk-controlled clinical image triage"
+type: software
+version: 1.0.0
+date-released: 2026-11-04
+authors:
+  - family-names: Wang
+    given-names: Zhiyuan
+  - family-names: Tan
+    given-names: Binyu
+  - family-names: Wang
+    given-names: Yu
+  - family-names: Shen
+    given-names: Junyi
+  - family-names: Jiang
+    given-names: Li
+  - family-names: Zhu
+    given-names: Xiaofeng
+  - family-names: Xu
+    given-names: Kaidi
+  - family-names: Shen
+    given-names: Heng Tao
+  - family-names: Shi
+    given-names: Xiaoshuang
+    email: xsshi2013@gmail.com
+repository-code: "https://github.com/tanbinyu/clinical-triage-lec"
+license: MIT
+keywords:
+  - clinical artificial intelligence
+  - selective prediction
+  - conformal risk control
+  - medical imaging
+  - routing
+references:
+  - type: conference-paper
+    title: "LEC: Linear Expectation Constraints for Selection-Conditioned Risk Control in Selective Prediction and Routing Systems"
+    year: 2026
+    collection-title: "Proceedings of the 43rd International Conference on Machine Learning"
+    publisher:
+      name: PMLR
+    url: "https://proceedings.mlr.press/v306/wang26a.html"
+
