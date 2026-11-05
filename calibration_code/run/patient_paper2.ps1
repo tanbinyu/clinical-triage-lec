@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$InputDir = "..\data\inference",
-    [string]$OutputDir = "result\patient_clustered\beta-0.01_alpha-0.20_source-cap-2000",
+    [string]$OutputDir = "result\patient_clustered\beta-0.01_alpha-0.20_source-cap-1850",
     [string]$Paper2Dir = "..\Paper2.0\Clinical_Triage__New_Version_",
     [string]$PythonExe = "python",
     [int]$Splits = 500,
@@ -37,7 +37,7 @@ try {
     else {
         $arguments = @(
             "run\cli.py", "clustered-paper",
-            "--config", "configs\patient_clustered_source_cap_2000_beta_001.json",
+            "--config", "configs\patient_clustered_source_cap_1850_beta_001.json",
             "--input-dir", $InputDir,
             "--output-dir", $OutputDir,
             "--n-splits", $Splits,

@@ -12,6 +12,7 @@ import matplotlib.ticker as mticker
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, TwoSlopeNorm
 
+from pipeline.patient_clustered.analysis import _source_partition_sizes
 from pipeline.patient_level.metadata import DISEASE_NAMES, DISEASE_SHORT_NAMES
 from pipeline.patient_level.suite import METHOD_LABELS, METHODS
 
@@ -204,7 +205,11 @@ def _source_sampling_note(suite: dict[str, Any]) -> str:
     cap = suite["meta"].get("max_patients_per_source")
     if cap is None:
         return ""
-    return " Source-balanced patient sampling was applied before calibration/test role assignment."
+    return (
+        f" Source-balanced patient sampling (maximum {int(cap):,} patients per "
+        "source) was applied before the source-stratified calibration/test "
+        "role assignment."
+    )
 
 
 def plot_primary_and_robustness(
@@ -517,6 +522,13 @@ def write_tables(
 ) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     audit = suite["input_audit"]
+    ratios = (
+        primary["meta"]["config"]["router_calib_ratio"],
+        primary["meta"]["config"]["specialist_calib_ratio"],
+        primary["meta"]["config"]["test_ratio"],
+    )
+    cap = suite["meta"].get("max_patients_per_source")
+    cap_text = f"{cap:,}" if cap is not None else "all available"
 
     # These names belonged to the earlier three-main-table layout.  Remove
     # them when re-rendering so the directory contains one unambiguous set.
@@ -528,7 +540,7 @@ def write_tables(
 
     table1 = [
         r"\begin{table*}[!t]", r"\centering",
-        r"\caption{\textbf{Source cohorts, reference-label distributions and source-balanced role allocation.} Cohort totals are calculated from the frozen inference exports before source balancing. For every repeated partition, up to 2,000 unique patients are sampled without replacement from each source; smaller sources are retained in full. The sampled patients are assigned without overlap to router calibration ($C_R$), specialist calibration ($C_S$) and held-out evaluation ($T$) in proportions 0.40/0.30/0.30. Because the primary analysis selects one decision per patient after assignment, the patient counts in the last three columns are also the primary decision counts. Class distributions are decision-level reference-label counts before source balancing. Multi-label positive counts can sum to more than the number of decisions; ``none'' denotes an empty label set.}",
+        rf"\caption{{\textbf{{Source cohorts, reference-label distributions and source-balanced role allocation.}} Cohort totals are calculated from the frozen inference exports before source balancing. For every repeated partition, up to {cap_text} unique patients are sampled without replacement from each source; smaller sources are retained in full. The sampled patients are assigned without overlap to router calibration ($C_R$), specialist calibration ($C_S$) and held-out evaluation ($T$) in proportions {ratios[0]:.2f}/{ratios[1]:.2f}/{ratios[2]:.2f}. Aggregate role quotas are matched exactly while preserving source stratification. Because the primary analysis selects one decision per patient after assignment, the patient counts in the last three columns are also the primary decision counts. Class distributions are decision-level reference-label counts before source balancing. Multi-label positive counts can sum to more than the number of decisions; ``none'' denotes an empty label set.}}",
         r"\label{tab:patient_clustered_cohort}",
         r"\textbf{a. Cohort size and primary role allocation}\par\smallskip",
         r"\begin{adjustbox}{max width=\textwidth,center}", r"\small",
@@ -538,31 +550,21 @@ def write_tables(
         r"\midrule",
     ]
 
-    ratios = (
-        primary["meta"]["config"]["router_calib_ratio"],
-        primary["meta"]["config"]["specialist_calib_ratio"],
-        primary["meta"]["config"]["test_ratio"],
-    )
-    cap = suite["meta"].get("max_patients_per_source")
-
-    def role_counts(n_patients: int) -> tuple[int, int, int]:
-        raw = np.asarray(ratios, dtype=float) * n_patients
-        sizes = np.floor(raw).astype(int)
-        remainder = n_patients - int(sizes.sum())
-        order = np.argsort(-(raw - sizes), kind="stable")
-        for index in order[:remainder]:
-            sizes[int(index)] += 1
-        return tuple(int(value) for value in sizes)
-
     ordered_sources = sorted(
         audit["sources"].items(), key=lambda item: item[1]["disease_id"]
     )
+    included_counts = [
+        min(row["patients"], cap) if cap is not None else row["patients"]
+        for _, row in ordered_sources
+    ]
+    role_allocations = _source_partition_sizes(included_counts, ratios)
     included_total = router_total = specialist_total = test_total = 0
-    for source, row in ordered_sources:
+    for (source, row), included, role_counts in zip(
+        ordered_sources, included_counts, role_allocations, strict=True
+    ):
         _, model, disease = SOURCE_METADATA[source]
         scope = next(iter(row["label_scope_counts"]))
-        included = min(row["patients"], cap) if cap is not None else row["patients"]
-        n_router, n_specialist, n_test = role_counts(included)
+        n_router, n_specialist, n_test = role_counts
         included_total += included
         router_total += n_router
         specialist_total += n_specialist

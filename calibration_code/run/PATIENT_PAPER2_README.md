@@ -23,8 +23,10 @@ downstream errors, and therefore has defined wrong-route metrics.
 
 The primary reporting target and the level used for specialist calibration are
 both `alpha = 0.20`, the router target is `beta = 0.01`, and a score- and
-outcome-blind cap of 2,000 patients per source is applied before role
-assignment; there is no hidden 0.18 safety-margin substitution. The default
+outcome-blind cap of 1,850 patients per source is applied before the
+source-stratified 30%/30%/40% role assignment. This gives 5,529 included
+patients and exact aggregate role counts of 1,659/1,659/2,211; there is no
+hidden 0.18 safety-margin substitution. The default
 config remains marked exploratory because the current directory contains all
 available records. The artifacts are built,
 but installation into Paper2.0 is automatically skipped. Installation is

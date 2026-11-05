@@ -33,10 +33,11 @@ routed phase-2 files only.
   never mixed.
 - Optional source balancing is controlled by `max_patients_per_source`. When
   configured, every split draws at most that many patients from each source
-  before the source-stratified 40%/30%/30% role assignment. Sampling is blind
+  before the source-stratified 30%/30%/40% role assignment. Aggregate role
+  quotas are matched exactly. Sampling is blind
   to labels, model scores and outcomes, and no patient can cross roles. The
-  `patient_clustered_source_cap_2000_beta_001.json` is the current manuscript
-  configuration. Its 2,000-patient limit prevents the largest source from
+  `patient_clustered_source_cap_1850_beta_001.json` is the current manuscript
+  configuration. Its 1,850-patient limit prevents the largest source from
   dominating the micro-pooled estimand, while the router target `beta = 0.01`
   yields feasible router and Proposed LEC pathway calibrations across all 500
   reference splits at the full calibration allocation. Earlier 10,000-, 3,000-
@@ -58,7 +59,7 @@ Two validation analyses accompany the primary analysis:
 
 ```powershell
 python run/cli.py clustered-run `
-  --config configs/patient_clustered_source_cap_2000_beta_001.json
+  --config configs/patient_clustered_source_cap_1850_beta_001.json
 ```
 
 For routine Paper2.0 production, use the wrapper instead:
@@ -74,7 +75,7 @@ A smoke run can use:
 
 ```powershell
 python run/cli.py clustered-run `
-  --config configs/patient_clustered_source_cap_2000_beta_001.json `
+  --config configs/patient_clustered_source_cap_1850_beta_001.json `
   --n-splits 5 --n-bootstrap 10 `
   --output-dir result/patient_clustered/smoke
 ```

@@ -36,9 +36,9 @@ class ClusteredExperimentConfig:
     calibration_policy_status: str = "exploratory_post_hoc"
     n_splits: int = 500
     n_bootstrap: int = 1000
-    router_calib_ratio: float = 0.40
+    router_calib_ratio: float = 0.30
     specialist_calib_ratio: float = 0.30
-    test_ratio: float = 0.30
+    test_ratio: float = 0.40
     # Optional source-balancing rule applied before role assignment.  A fresh,
     # score- and outcome-blind patient sample is drawn within every source and
     # split, then divided into C_R/C_S/T using the configured ratios.
@@ -112,6 +112,66 @@ class ClusteredExperimentConfig:
             raise ValueError("lambda_1 and lambda_2 must sum to one")
 
 
+def _source_partition_sizes(
+    source_counts: list[int],
+    ratios: tuple[float, float, float],
+) -> list[tuple[int, int, int]]:
+    """Allocate source strata while matching aggregate role quotas exactly.
+
+    Largest-remainder allocation is first applied independently within each
+    source. A deterministic minimum-cost rebalancing then moves the smallest
+    possible number of patients between roles so the column totals equal the
+    largest-remainder allocation of the full source-balanced cohort. This
+    preserves source stratification and reproduces the manuscript's
+    1,659/1,659/2,211 allocation for 5,529 included patients.
+    """
+    if not source_counts:
+        return []
+    raw = np.asarray(source_counts, dtype=float)[:, None] * np.asarray(
+        ratios, dtype=float
+    )[None, :]
+    sizes = np.asarray(
+        [_partition_sizes(count, ratios) for count in source_counts], dtype=int
+    )
+    target = np.asarray(_partition_sizes(sum(source_counts), ratios), dtype=int)
+    current = sizes.sum(axis=0)
+
+    while not np.array_equal(current, target):
+        donors = np.flatnonzero(current > target)
+        receivers = np.flatnonzero(current < target)
+        candidates: list[tuple[float, int, int, int]] = []
+        for source_index in range(len(source_counts)):
+            for donor in donors:
+                if sizes[source_index, donor] <= 1:
+                    continue
+                for receiver in receivers:
+                    before = (
+                        (sizes[source_index, donor] - raw[source_index, donor]) ** 2
+                        + (sizes[source_index, receiver] - raw[source_index, receiver]) ** 2
+                    )
+                    after = (
+                        (sizes[source_index, donor] - 1 - raw[source_index, donor]) ** 2
+                        + (sizes[source_index, receiver] + 1 - raw[source_index, receiver]) ** 2
+                    )
+                    candidates.append(
+                        (
+                            round(float(after - before), 12),
+                            source_index,
+                            int(donor),
+                            int(receiver),
+                        )
+                    )
+        if not candidates:
+            raise RuntimeError("Unable to reconcile source-stratified role totals")
+        _, source_index, donor, receiver = min(candidates)
+        sizes[source_index, donor] -= 1
+        sizes[source_index, receiver] += 1
+        current[donor] -= 1
+        current[receiver] += 1
+
+    return [tuple(int(value) for value in row) for row in sizes]
+
+
 def _patient_partitions(
     data: ClusteredDecisionScores,
     *,
@@ -121,13 +181,21 @@ def _patient_partitions(
     max_patients_per_source: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(np.random.SeedSequence([seed, epoch]))
-    router_parts, specialist_parts, test_parts = [], [], []
+    selected_by_source: list[np.ndarray] = []
     for source in sorted(data.source_patient_indices):
         patients = data.source_patient_indices[source].copy()
         rng.shuffle(patients)
         if max_patients_per_source is not None:
             patients = patients[:max_patients_per_source]
-        n_router, n_specialist, _ = _partition_sizes(patients.size, ratios)
+        selected_by_source.append(patients)
+
+    allocations = _source_partition_sizes(
+        [int(patients.size) for patients in selected_by_source], ratios
+    )
+    router_parts, specialist_parts, test_parts = [], [], []
+    for patients, (n_router, n_specialist, _) in zip(
+        selected_by_source, allocations, strict=True
+    ):
         router_parts.append(patients[:n_router])
         specialist_parts.append(patients[n_router:n_router + n_specialist])
         test_parts.append(patients[n_router + n_specialist:])

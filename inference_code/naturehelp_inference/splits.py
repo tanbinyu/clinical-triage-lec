@@ -14,7 +14,7 @@ from .records import SampleRecord
 
 SPLIT_VERSION = 4
 SPLIT_NAMES = ("train", "val", "downstream")
-DOWNSTREAM_PARTITION_VERSION = 1
+DOWNSTREAM_PARTITION_VERSION = 2
 DOWNSTREAM_ROLES = ("CR", "CS", "T")
 
 
@@ -72,6 +72,55 @@ def _largest_remainder(count: int, fractions: tuple[float, ...]) -> list[int]:
 
 def _capacities(count: int, fractions: tuple[float, float, float]) -> list[int]:
     return _largest_remainder(count, fractions)
+
+
+def _source_role_capacities(
+    source_counts: list[int], fractions: tuple[float, float, float]
+) -> list[list[int]]:
+    """Allocate source strata while matching aggregate role quotas exactly."""
+    if not source_counts:
+        return []
+    raw = [
+        [count * fraction for fraction in fractions]
+        for count in source_counts
+    ]
+    sizes = [_capacities(count, fractions) for count in source_counts]
+    target = _capacities(sum(source_counts), fractions)
+    current = [sum(row[index] for row in sizes) for index in range(3)]
+
+    while current != target:
+        donors = [index for index in range(3) if current[index] > target[index]]
+        receivers = [index for index in range(3) if current[index] < target[index]]
+        candidates: list[tuple[float, int, int, int]] = []
+        for source_index in range(len(source_counts)):
+            for donor in donors:
+                if sizes[source_index][donor] <= 1:
+                    continue
+                for receiver in receivers:
+                    before = (
+                        (sizes[source_index][donor] - raw[source_index][donor]) ** 2
+                        + (sizes[source_index][receiver] - raw[source_index][receiver]) ** 2
+                    )
+                    after = (
+                        (sizes[source_index][donor] - 1 - raw[source_index][donor]) ** 2
+                        + (sizes[source_index][receiver] + 1 - raw[source_index][receiver]) ** 2
+                    )
+                    candidates.append(
+                        (
+                            round(after - before, 12),
+                            source_index,
+                            donor,
+                            receiver,
+                        )
+                    )
+        if not candidates:
+            raise RuntimeError("无法协调来源分层后的全局角色人数")
+        _, source_index, donor, receiver = min(candidates)
+        sizes[source_index][donor] -= 1
+        sizes[source_index][receiver] += 1
+        current[donor] -= 1
+        current[receiver] += 1
+    return sizes
 
 
 def _fixed_split_capacities(
@@ -431,8 +480,9 @@ def make_downstream_partition(
     """Create the paper's second-stage patient partition without outcome leakage.
 
     First, only patients assigned to the fixed 60% downstream pool are eligible.
-    At most 2,000 patients are selected independently in each source.  Selected
-    patients are then assigned to CR/CS/T with largest-remainder 40/30/30 counts.
+    At most 1,850 patients are selected independently in each source. Selected
+    patients are then assigned to CR/CS/T with source-stratified 30/30/40
+    counts whose aggregate quotas are matched exactly.
     Finally, one genuine source-defined decision is selected per patient for the
     primary analysis.  Hash ranking is equivalent to seeded sampling without
     replacement and is invariant to filesystem enumeration order.
@@ -445,6 +495,9 @@ def make_downstream_partition(
     )
     datasets: dict[str, object] = {}
     global_role_counts: Counter[str] = Counter()
+    prepared: list[
+        tuple[str, list[SampleRecord], dict[str, str], dict[str, list[SampleRecord]], list[str]]
+    ] = []
 
     for dataset in sorted(manifests, key=lambda name: config.datasets[name].disease_id):
         records = manifests[dataset]
@@ -462,17 +515,27 @@ def make_downstream_partition(
             ranked if reference
             else ranked[:config.max_downstream_patients_per_source]
         )
-        if reference:
+        prepared.append((dataset, records, split_assignments, groups, selected))
+
+    if reference:
+        allocations = []
+        for dataset, _, _, groups, selected in prepared:
             final_counts = _largest_remainder(
-                len(groups), (0.35, 0.05, 0.24, 0.18, 0.18)
+                len(groups), (0.35, 0.05, 0.18, 0.18, 0.24)
             )
             role_counts = final_counts[2:]
             if sum(role_counts) != len(selected):
                 raise RuntimeError(
                     f"{dataset}: reference downstream count 与固定 split 不一致"
                 )
-        else:
-            role_counts = _capacities(len(selected), role_fractions)
+            allocations.append(role_counts)
+    else:
+        allocations = _source_role_capacities(
+            [len(selected) for _, _, _, _, selected in prepared], role_fractions
+        )
+
+    for prepared_source, role_counts in zip(prepared, allocations, strict=True):
+        dataset, records, split_assignments, groups, selected = prepared_source
         roles: dict[str, str] = {}
         offset = 0
         for role, count in zip(DOWNSTREAM_ROLES, role_counts, strict=True):

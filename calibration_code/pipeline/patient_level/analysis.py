@@ -23,9 +23,9 @@ class PatientExperimentConfig:
     alpha: float = 0.20
     n_splits: int = 500
     n_bootstrap: int = 1000
-    router_calib_ratio: float = 0.40
+    router_calib_ratio: float = 0.30
     specialist_calib_ratio: float = 0.30
-    test_ratio: float = 0.30
+    test_ratio: float = 0.40
     seed: int = 20260919
     aggregation: str = "mean"
     # Legacy fused-score weights; specialist calibration now uses u_i^k only.

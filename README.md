@@ -92,13 +92,15 @@ python run_full_pipeline.py --scope all
 ## Reproduce calibration and paper artifacts
 
 The primary operating point is `alpha=0.20`, `beta=0.01`, with a maximum of
-2,000 eligible downstream patients per source. From `calibration_code` run:
+1,850 eligible downstream patients per source. The resulting 5,529-patient
+cohort is allocated to `C_R/C_S/T` as 30%/30%/40%
+(1,659/1,659/2,211). From `calibration_code` run:
 
 ```bash
 python run/cli.py clustered-paper \
-  --config configs/patient_clustered_source_cap_2000_beta_001.json \
+  --config configs/patient_clustered_source_cap_1850_beta_001.json \
   --input-dir ../data/inference \
-  --output-dir result/patient_clustered/beta-0.01_alpha-0.20-source-cap-2000 \
+  --output-dir result/patient_clustered/beta-0.01_alpha-0.20-source-cap-1850 \
   --no-install
 ```
 

@@ -47,9 +47,9 @@ def _config_from_json(path: Path) -> ClusteredExperimentConfig:
         ),
         n_splits=int(values.get("n_splits", 500)),
         n_bootstrap=int(values.get("n_bootstrap", 1000)),
-        router_calib_ratio=float(values.get("router_calib_ratio", 0.40)),
+        router_calib_ratio=float(values.get("router_calib_ratio", 0.30)),
         specialist_calib_ratio=float(values.get("specialist_calib_ratio", 0.30)),
-        test_ratio=float(values.get("test_ratio", 0.30)),
+        test_ratio=float(values.get("test_ratio", 0.40)),
         max_patients_per_source=(
             None if values.get("max_patients_per_source") is None
             else int(values["max_patients_per_source"])
@@ -82,7 +82,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--config",
-        default=str(PROJECT_ROOT / "configs" / "patient_clustered_beta_001.json"),
+        default=str(
+            PROJECT_ROOT
+            / "configs"
+            / "patient_clustered_source_cap_1850_beta_001.json"
+        ),
     )
     parser.add_argument("--input-dir")
     parser.add_argument("--output-dir")

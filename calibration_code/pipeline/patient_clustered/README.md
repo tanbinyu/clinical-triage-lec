@@ -23,11 +23,12 @@ workflow schematics are not statistical results and are copied unchanged.
 
 ```powershell
 # Complete calculation and Paper2.0 packaging
-python run/cli.py clustered-paper --config configs/patient_clustered_beta_001.json
+python run/cli.py clustered-paper `
+  --config configs/patient_clustered_source_cap_1850_beta_001.json
 
 # Rebuild only figures/tables from existing metrics
 python run/cli.py clustered-render `
-  --run-dir result/patient_clustered/beta-0.01_alpha-0.20 `
+  --run-dir result/patient_clustered/beta-0.01_alpha-0.20_source-cap-1850 `
   --install-paper2
 ```
 
@@ -41,6 +42,9 @@ For the shortest Windows command, use `run/patient_paper2.ps1`.
   image-/lesion-scoped labels.
 - Optional source cap: `max_patients_per_source` draws a score- and
   outcome-blind patient subsample within every source before role assignment.
+  The manuscript configuration caps each source at 1,850 patients and assigns
+  the resulting 5,529 patients to `C_R/C_S/T` in exact aggregate counts of
+  1,659/1,659/2,211 (30%/30%/40%).
   It changes the target source mixture and is therefore reported as a separate
   source-balanced analysis rather than silently replacing the uncapped cohort.
 - Sensitivity: all genuine decisions are retained, with patient IDs defining

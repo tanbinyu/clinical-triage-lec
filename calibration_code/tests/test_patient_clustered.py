@@ -11,6 +11,7 @@ from pipeline.patient_clustered.analysis import (
     ClusteredExperimentConfig,
     _expand_one,
     _patient_partitions,
+    _source_partition_sizes,
     clustered_decision_split,
     patient_balanced_bootstrap_partitions,
     patient_balanced_split,
@@ -142,6 +143,27 @@ class PatientClusteredTests(unittest.TestCase):
             self.assertFalse(role_sets[0] & role_sets[1])
             self.assertFalse(role_sets[0] & role_sets[2])
             self.assertFalse(role_sets[1] & role_sets[2])
+
+    def test_manuscript_source_allocations_match_global_role_quotas(self):
+        source_counts = [27, 49, 163, 52, 66, 1850, 940, 639, 1653, 90]
+        expected = [
+            (8, 8, 11),
+            (14, 15, 20),
+            (49, 49, 65),
+            (16, 15, 21),
+            (20, 20, 26),
+            (555, 555, 740),
+            (282, 282, 376),
+            (192, 192, 255),
+            (496, 496, 661),
+            (27, 27, 36),
+        ]
+        actual = _source_partition_sizes(source_counts, (0.30, 0.30, 0.40))
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            [sum(row[index] for row in actual) for index in range(3)],
+            [1659, 1659, 2211],
+        )
 
     def test_vectorized_one_decision_sampling_preserves_scalar_rng_sequence(self):
         with tempfile.TemporaryDirectory() as directory:

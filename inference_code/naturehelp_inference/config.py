@@ -194,9 +194,9 @@ def load_config(path: str | Path) -> PipelineConfig:
             "必须均大于 0 且总和为 1"
         )
     downstream_role_fractions = (
-        float(runtime.get("cr_fraction", 0.40)),
+        float(runtime.get("cr_fraction", 0.30)),
         float(runtime.get("cs_fraction", 0.30)),
-        float(runtime.get("evaluation_fraction", 0.30)),
+        float(runtime.get("evaluation_fraction", 0.40)),
     )
     if any(value <= 0.0 for value in downstream_role_fractions) or abs(
         sum(downstream_role_fractions) - 1.0
@@ -226,7 +226,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         cs_fraction=downstream_role_fractions[1],
         evaluation_fraction=downstream_role_fractions[2],
         max_downstream_patients_per_source=int(
-            runtime.get("max_downstream_patients_per_source", 2000)
+            runtime.get("max_downstream_patients_per_source", 1850)
         ),
         deterministic_algorithms=bool(runtime.get("deterministic_algorithms", True)),
         multilabel_threshold=float(runtime.get("multilabel_threshold", 0.5)),

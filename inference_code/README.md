@@ -88,7 +88,8 @@ python run_inference.py doctor --require-adapters
    固定层按患者使用 seed `20261019` 分成 35% adapter train、5% adapter
    validation 和 60% downstream pool。第二层只在 downstream pool 内划分：
    参考划分用 seed `20261019`；重复实验用 seed `20260929 + repetition`；
-   每个来源最多抽取 2,000 名患者，再以最大余数法分配 CR/CS/T=40%/30%/30%。
+   每个来源最多抽取 1,850 名患者，再按来源分层分配
+   CR/CS/T=30%/30%/40%，并精确匹配全局人数 1,659/1,659/2,211。
    `partition` 文件同时保存每名患者的角色和在角色确定后等概率选中的一个原生 decision。
 
 3. 训练每个数据集自己的 adapter：

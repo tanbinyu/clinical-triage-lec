@@ -195,34 +195,35 @@ class CoreTests(unittest.TestCase):
 
     def test_paper_split_uses_largest_remainder_patient_counts(self) -> None:
         expected = {
-            45: (16, 2, 11, 8, 8),
-            82: (29, 4, 19, 15, 15),
-            271: (95, 13, 65, 49, 49),
-            86: (30, 4, 21, 16, 15),
-            110: (39, 5, 26, 20, 20),
-            30805: (10782, 1540, 7393, 5545, 5545),
-            1566: (548, 78, 376, 282, 282),
-            1064: (372, 53, 255, 192, 192),
-            2756: (965, 138, 661, 496, 496),
-            150: (53, 7, 36, 27, 27),
+            45: (16, 2, 8, 8, 11),
+            82: (29, 4, 15, 15, 19),
+            271: (95, 13, 49, 49, 65),
+            86: (30, 4, 16, 15, 21),
+            110: (39, 5, 20, 20, 26),
+            30805: (10782, 1540, 5545, 5545, 7393),
+            1566: (548, 78, 282, 282, 376),
+            1064: (372, 53, 192, 192, 255),
+            2756: (965, 138, 496, 496, 661),
+            150: (53, 7, 27, 27, 36),
         }
-        from naturehelp_inference.splits import _capacities, _largest_remainder
+        from naturehelp_inference.splits import (
+            _largest_remainder,
+            _source_role_capacities,
+        )
         for patients, counts in expected.items():
             self.assertEqual(
                 tuple(_largest_remainder(
-                    patients, (0.35, 0.05, 0.24, 0.18, 0.18)
+                    patients, (0.35, 0.05, 0.18, 0.18, 0.24)
                 )),
                 counts,
             )
         downstream = [sum(counts[2:]) for counts in expected.values()]
-        source_balanced = [
-            _capacities(min(2000, count), (0.40, 0.30, 0.30))
-            for count in downstream
-        ]
-        self.assertEqual(sum(min(2000, count) for count in downstream), 5679)
+        capped = [min(1850, count) for count in downstream]
+        source_balanced = _source_role_capacities(capped, (0.30, 0.30, 0.40))
+        self.assertEqual(sum(capped), 5529)
         self.assertEqual(
             [sum(row[index] for row in source_balanced) for index in range(3)],
-            [2270, 1705, 1704],
+            [1659, 1659, 2211],
         )
 
 
