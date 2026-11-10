@@ -33,6 +33,9 @@ Thumbs.db
 # Calibration outputs and local QA artifacts
 /calibration_code/result/
 /calibration_code/tmp/
+/calibration_code/.test-tmp/
+/calibration_code/reproducibility/manuscript_run_manifest.json
+/calibration_code/reproducibility/Reviewer_Reproducibility_Bundle.zip
 
 # Historical one-off wrappers are retained locally but are not part of the release
 /calibration_code/run/legacy/

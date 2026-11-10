@@ -55,6 +55,14 @@ def _config_from_json(path: Path) -> ClusteredExperimentConfig:
             else int(values["max_patients_per_source"])
         ),
         seed=int(values.get("seed", 20260929)),
+        development_split_seed=int(values.get("development_split_seed", 20261019)),
+        development_train_ratio=float(values.get("development_train_ratio", 0.35)),
+        development_validation_ratio=float(
+            values.get("development_validation_ratio", 0.05)
+        ),
+        development_downstream_ratio=float(
+            values.get("development_downstream_ratio", 0.60)
+        ),
         patient_aggregation=str(values.get("patient_aggregation", "mean")),
         lambda_1=float(values.get("lambda_1", 0.00)),
         lambda_2=float(values.get("lambda_2", 1.00)),
@@ -71,6 +79,7 @@ def _config_from_json(path: Path) -> ClusteredExperimentConfig:
         run_strict_patient_subset=bool(values.get("run_strict_patient_subset", True)),
         run_paper_suite=bool(values.get("run_paper_suite", True)),
         manuscript_dir=optional_resolved("manuscript_dir"),
+        config_file=path.resolve(),
     )
 
 

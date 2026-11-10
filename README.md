@@ -47,8 +47,8 @@ For calibration only:
 
 ```bash
 cd calibration_code
-python -m venv .venv
-python -m pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate clinical-triage-lec-calibration
 ```
 
 ## Configure local data and checkpoints
@@ -109,6 +109,15 @@ patient-cluster bootstrap replicates, sensitivity analyses, and writes a
 manifested 17-item paper suite (11 figures and 6 tables) below the selected
 output directory. Generated files are ignored by Git.
 
+The run-specific eligibility/export hashes, exact 5,529-patient allocation,
+seed map, bootstrap-to-result mapping and environment are documented and
+machine-checked as described in
+[`calibration_code/reproducibility/README.md`](calibration_code/reproducibility/README.md).
+Before submission, build the manifest with `--require-results`; this rejects a
+run unless it contains exactly 500 reference partitions and 1,000 bootstrap
+replicates. Editor/reviewer delivery is described in
+[`calibration_code/reproducibility/REVIEWER_ACCESS.md`](calibration_code/reproducibility/REVIEWER_ACCESS.md).
+
 For a fast structural check that does not run the full experiment:
 
 ```bash
@@ -122,8 +131,8 @@ python -m unittest discover -s tests -p "test_*.py"
   disjoint within each repetition.
 - Patient identifiers in the frozen JSON contract must be de-identified study
   keys; provider identifiers and source images are not redistributed.
-- Random seeds, split manifests, checkpoint identifiers and input hashes are
-  recorded by the inference workflow.
+- Random seeds, eligibility/allocation digests, input hashes, result hashes and
+  the executing code/environment are recorded by the calibration manifest.
 - The calibration workflow does not consume `specialist-only/` exports for the
   primary routed-specialist comparison.
 

@@ -13,6 +13,7 @@ from .analysis import (
     ClusteredExperimentConfig,
     clustered_bootstrap,
     clustered_reference,
+    eligibility_allocation_audit,
 )
 from .data import aggregate_strict_patient_subset, load_clustered_decisions
 
@@ -30,10 +31,9 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def _config_dict(config: ClusteredExperimentConfig) -> dict[str, Any]:
     values = asdict(config)
-    values["input_dir"] = str(Path(config.input_dir).resolve())
-    values["output_dir"] = str(Path(config.output_dir).resolve())
-    if config.manuscript_dir is not None:
-        values["manuscript_dir"] = str(Path(config.manuscript_dir).resolve())
+    for name, value in list(values.items()):
+        if isinstance(value, Path):
+            values[name] = str(value.resolve())
     return values
 
 
@@ -78,6 +78,17 @@ def run_clustered_experiment(
         require_specialist_only=config.require_specialist_only,
     )
     print(f"  {data.n_decisions:,} decisions in {data.n_patients:,} patient clusters")
+    eligibility = eligibility_allocation_audit(data, config)
+    totals = eligibility["totals"]
+    print(
+        "  fixed downstream eligibility: "
+        f"{totals['eligible_downstream_patients']:,} patients; "
+        f"{totals['included_after_source_cap']:,} after source cap; "
+        "C_R/C_S/T="
+        f"{totals['router_calibration_patients']:,}/"
+        f"{totals['specialist_calibration_patients']:,}/"
+        f"{totals['held_out_test_patients']:,}"
+    )
     primary_label = (
         "one-decision-per-patient"
         if config.patient_balanced_primary else "all-decision"
@@ -132,14 +143,15 @@ def run_clustered_experiment(
             "calibration_policy_status": config.calibration_policy_status,
             "max_patients_per_source": config.max_patients_per_source,
             "source_sampling": (
-                "score- and outcome-blind patient cap applied within each source "
-                "before C_R/C_S/T assignment"
+                "fixed score- and outcome-blind patient cap applied within each "
+                "source before repeated C_R/C_S/T assignment"
                 if config.max_patients_per_source is not None else
                 "all available patients within each source"
             ),
             "config": _config_dict(config),
         },
         "input_audit": audit,
+        "eligibility_and_allocation": eligibility,
         "reference": reference,
         "bootstrap": bootstrap,
     }
@@ -148,8 +160,21 @@ def run_clustered_experiment(
     (metrics_dir / "input_audit.json").write_text(
         json.dumps(audit, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    (metrics_dir / "eligibility_allocation_audit.json").write_text(
+        json.dumps(eligibility, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     _write_csv(metrics_dir / "reference_split_metrics.csv", reference_output["split_rows"])
     _write_csv(metrics_dir / "patient_cluster_bootstrap_replicates.csv", bootstrap_rows)
+    if len(reference_output["split_rows"]) != config.n_splits:
+        raise RuntimeError(
+            f"Reference split output has {len(reference_output['split_rows'])} rows; "
+            f"expected {config.n_splits}"
+        )
+    if len(bootstrap_rows) != config.n_bootstrap:
+        raise RuntimeError(
+            f"Bootstrap output has {len(bootstrap_rows)} rows; "
+            f"expected {config.n_bootstrap}"
+        )
 
     secondary_result = None
     secondary_metrics_path = None
@@ -331,9 +356,20 @@ def run_clustered_experiment(
             if paper_suite_path and config.manuscript_dir else None
         ),
         "input_files": audit["files"],
+        "eligibility_and_allocation": eligibility,
     }
     (output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
     )
+    from .provenance import build_run_provenance, write_run_provenance
+
+    provenance = build_run_provenance(
+        config=config,
+        input_audit=audit,
+        eligibility_audit=eligibility,
+        output_dir=output_dir,
+        require_results=True,
+    )
+    write_run_provenance(output_dir / "run_provenance.json", provenance)
     print(f"Patient-clustered results written to {output_dir.resolve()}")
     return result, result_path

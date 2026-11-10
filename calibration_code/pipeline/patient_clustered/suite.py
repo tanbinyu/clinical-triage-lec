@@ -83,6 +83,12 @@ def baseline_cluster_bootstrap(
             seed=config.seed + 100_000,
             ratios=ratios,
             max_patients_per_source=config.max_patients_per_source,
+            development_split_seed=config.development_split_seed,
+            development_ratios=(
+                config.development_train_ratio,
+                config.development_validation_ratio,
+                config.development_downstream_ratio,
+            ),
         )
         state = _split_methods(
             data,
@@ -163,6 +169,12 @@ def patient_clustered_calibration_size_grid(
             router_patients, specialist_patients, test_patients = _patient_partitions(
                 data, epoch=epoch, seed=config.seed, ratios=ratios,
                 max_patients_per_source=config.max_patients_per_source,
+                development_split_seed=config.development_split_seed,
+                development_ratios=(
+                    config.development_train_ratio,
+                    config.development_validation_ratio,
+                    config.development_downstream_ratio,
+                ),
             )
             rng = np.random.default_rng(np.random.SeedSequence([
                 config.seed, epoch, int(fraction * 1000), 1771,
@@ -309,6 +321,12 @@ def run_patient_clustered_suite(
         patient_balanced_split
         if config.patient_balanced_primary else clustered_decision_split,
         max_patients_per_source=config.max_patients_per_source,
+        development_split_seed=config.development_split_seed,
+        development_ratios=(
+            config.development_train_ratio,
+            config.development_validation_ratio,
+            config.development_downstream_ratio,
+        ),
     )
     # The primary, alpha-grid and beta-grid analyses use identical partitions
     # and (for patient-balanced runs) identical sampled decisions for a given
@@ -407,8 +425,8 @@ def run_patient_clustered_suite(
             "calibration_policy_status": config.calibration_policy_status,
             "max_patients_per_source": config.max_patients_per_source,
             "source_sampling": (
-                "score- and outcome-blind patient cap applied within each source "
-                "before C_R/C_S/T assignment"
+                "fixed score- and outcome-blind patient cap applied within each "
+                "source before repeated C_R/C_S/T assignment"
                 if config.max_patients_per_source is not None else
                 "all available patients within each source"
             ),

@@ -32,9 +32,10 @@ routed phase-2 files only.
   router-passed decisions and is reported separately; the two denominators are
   never mixed.
 - Optional source balancing is controlled by `max_patients_per_source`. When
-  configured, every split draws at most that many patients from each source
-  before the source-stratified 30%/30%/40% role assignment. Aggregate role
-  quotas are matched exactly. Sampling is blind
+  configured, a fixed score- and outcome-blind subset of at most that many
+  eligible downstream patients is retained from each source before the
+  repeated source-stratified 30%/30%/40% role assignments. Aggregate role
+  quotas are matched exactly. Selection is blind
   to labels, model scores and outcomes, and no patient can cross roles. The
   `patient_clustered_source_cap_1850_beta_001.json` is the current manuscript
   configuration. Its 1,850-patient limit prevents the largest source from
@@ -85,6 +86,10 @@ python run/cli.py clustered-run `
 `result/patient_clustered/<run>/` contains:
 
 - `manifest.json`: authoritative input path and hashes;
+- `run_provenance.json`: public-safe config, code/environment state, input and
+  cohort digests, exact result hashes and 500/1,000 row-count checks;
+- `metrics/eligibility_allocation_audit.json`: source-level 35%/5%/60%, cap and
+  30%/30%/40% counts without patient identifiers;
 - `metrics/patient_clustered_results.json`: ten-pathway primary analysis;
 - `metrics/patient_balanced_sensitivity.json`: one-decision-per-patient analysis;
 - `metrics/strict_patient_subset.json`: strict patient/volume-scope validation;

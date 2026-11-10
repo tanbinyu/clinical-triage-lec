@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from pipeline.patient_clustered.analysis import (
     ClusteredExperimentConfig,
     _expand_one,
+    _fixed_development_counts,
     _patient_partitions,
     _source_partition_sizes,
     clustered_decision_split,
@@ -26,6 +27,7 @@ from pipeline.patient_clustered.paper_reporting import (
     _validate_subplot_axis_labels,
     write_paper2_table_set,
 )
+from pipeline.patient_clustered.provenance import build_run_provenance
 from pipeline.patient_clustered.artifacts import (
     expected_artifact_paths,
     install_paper2_artifacts,
@@ -164,6 +166,95 @@ class PatientClusteredTests(unittest.TestCase):
             [sum(row[index] for row in actual) for index in range(3)],
             [1659, 1659, 2211],
         )
+
+    def test_fixed_development_pool_and_cap_match_manuscript_counts(self):
+        full_counts = [45, 82, 271, 86, 110, 30805, 1566, 1064, 2756, 150]
+        downstream = [
+            _fixed_development_counts(
+                count,
+                train_ratio=0.35,
+                validation_ratio=0.05,
+                downstream_ratio=0.60,
+                downstream_role_ratios=(0.30, 0.30, 0.40),
+            )[2]
+            for count in full_counts
+        ]
+        self.assertEqual(
+            downstream,
+            [27, 49, 163, 52, 66, 18483, 940, 639, 1653, 90],
+        )
+        included = [min(count, 1850) for count in downstream]
+        self.assertEqual(sum(included), 5529)
+        allocations = _source_partition_sizes(included, (0.30, 0.30, 0.40))
+        self.assertEqual(
+            [sum(row[index] for row in allocations) for index in range(3)],
+            [1659, 1659, 2211],
+        )
+
+    def test_source_cap_membership_is_fixed_across_repetitions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            self._fixture(root)
+            scores, _ = load_clustered_decisions(root)
+            first = _patient_partitions(
+                scores,
+                epoch=0,
+                seed=7,
+                ratios=(0.30, 0.30, 0.40),
+                max_patients_per_source=5,
+            )
+            second = _patient_partitions(
+                scores,
+                epoch=1,
+                seed=7,
+                ratios=(0.30, 0.30, 0.40),
+                max_patients_per_source=5,
+            )
+            self.assertEqual(
+                set(np.concatenate(first).tolist()),
+                set(np.concatenate(second).tolist()),
+            )
+
+    def test_run_provenance_maps_exact_split_and_bootstrap_rows(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            metrics = root / "metrics"
+            metrics.mkdir()
+            (metrics / "patient_clustered_results.json").write_text(
+                "{}", encoding="utf-8"
+            )
+            (metrics / "reference_split_metrics.csv").write_text(
+                "split,value\n0,1\n1,2\n", encoding="utf-8"
+            )
+            (metrics / "patient_cluster_bootstrap_replicates.csv").write_text(
+                "replicate,value\n0,1\n1,2\n2,3\n", encoding="utf-8"
+            )
+            config = ClusteredExperimentConfig(
+                input_dir=root / "input",
+                output_dir=root,
+                n_splits=2,
+                n_bootstrap=3,
+            )
+            payload = build_run_provenance(
+                config=config,
+                input_audit={
+                    "files": [{"name": "phase_1.json", "sha256": "0" * 64}]
+                },
+                eligibility_audit={
+                    "included_after_cap_membership_sha256": "1" * 64
+                },
+                output_dir=root,
+                require_results=True,
+            )
+            chain = payload["bootstrap_chain"]
+            self.assertEqual(chain["status"], "complete")
+            self.assertEqual(chain["results"]["reference_splits"]["rows"], 2)
+            self.assertEqual(chain["results"]["bootstrap_replicates"]["rows"], 3)
+            self.assertTrue(
+                chain["results"]["bootstrap_replicates"][
+                    "row_count_matches_config"
+                ]
+            )
 
     def test_vectorized_one_decision_sampling_preserves_scalar_rng_sequence(self):
         with tempfile.TemporaryDirectory() as directory:
